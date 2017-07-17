@@ -1,6 +1,15 @@
 #! /usr/bin/env python
 """
+humpbackdb -- a script for adding data. 
 
+
+Usage:
+    humpbackdb -h | --help
+    humpbackdb --root_dir <root>
+    
+Options:
+    -h --help               Show this screen.
+    --root_dir=<root>       The directory where the scans live.
 """
 
 from attrs_utils.interop import from_docopt
@@ -8,12 +17,13 @@ import sys
 import os
 from os import path
 from typing import Optional, List
-from humpback_db.core import Metadata, Args
+from humpback_db.core import Metadata
 import lxml
 
 
 def main(inputargs) -> int:
     args = from_docopt(inputargs, docstring=__doc__)
+    args.root_dir = path.expanduser(args.root_dir)
     validate_input(args)
     validate_dirs(args.root_dir)
     return 0
@@ -33,7 +43,7 @@ def validate_dirs(root: str) -> None:
 
     def is_bijective(tifflist: List, metalist: List) -> bool:
         tiff_stripped = sorted([path.splitext(x)[0] for x in tifflist])
-        meta_stripped = sorted([path.splitext(x)[0] for x in metalist])
+        meta_stripped = sorted([path.splitext(x)[0].split('.')[0] for x in metalist])
         return tiff_stripped == meta_stripped
 
     error_text = ''
