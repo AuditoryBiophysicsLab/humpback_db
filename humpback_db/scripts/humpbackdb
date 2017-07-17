@@ -18,8 +18,7 @@ import os
 from os import path
 from typing import Optional, List
 from humpback_db.core import Metadata
-import lxml
-
+from lxml import etree, objectify
 
 def main(inputargs) -> int:
     args = from_docopt(inputargs, docstring=__doc__)
@@ -61,7 +60,8 @@ def validate_dirs(root: str) -> None:
 
 
 def read_metadata(xml_file: str) -> Metadata:
-    pass
+    tree = etree.parse(xml_file)
+    context = etree.iterparse()
 
 
 if __name__ == "__main__":
