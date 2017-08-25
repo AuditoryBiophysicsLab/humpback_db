@@ -5,10 +5,12 @@ humpbackdb -- a script for adding data.
 
 Usage:
     humpbackdb -h | --help
-    humpbackdb --root_dir <root>
+    humpbackdb --root_dir <root> [--verbose] [--validate]
     
 Options:
     -h --help               Show this screen.
+    --verbose               Verbose output.
+    --validate              Check that root_dir is OK.
     --root_dir=<root>       The directory where the scans live.
 """
 
@@ -17,33 +19,52 @@ import sys
 import os
 from os import path
 from typing import Optional, List
-from humpback_db.core import Metadata
-from lxml import etree, objectify
+from humpback_db import metadata
+from logging import info, getLogger, ERROR, error
+
 
 def main(inputargs) -> int:
     args = from_docopt(inputargs, docstring=__doc__)
     args.root_dir = path.expanduser(args.root_dir)
+    if not args.verbose:
+        getLogger().setLevel(ERROR)
     validate_input(args)
-    validate_dirs(args.root_dir)
+    if args.validate:
+        validate_dirs(args.root_dir)
+
+
+
+
     return 0
 
 
 def validate_input(args) -> None:
+    """Ensure that the input arguments are reasonable"""
     error_text = ''
     if not os.path.isdir(args.root_dir):
         error_text += f'\n\t{args.root_dir} is not a directory!'
     if error_text:
-        exit(f'Found the following problems with the input:{error_text}')
-
+        error(f'Found the following problems with the input:{error_text}')
+        exit(-1)
 
 def validate_dirs(root: str) -> None:
+    """Walk all the directories from a root directory and ensure that each of them contains
+    the same number of tiff files and metadata files and that each collection is unique."""
     def is_unique(mylist: List) -> bool:
+        """returns true if the (flat) list contains no duplicates."""
         return len(mylist) == len(set(mylist))
 
     def is_bijective(tifflist: List, metalist: List) -> bool:
+        """returns true if the list of tiffs and their metadata are bijective."""
         tiff_stripped = sorted([path.splitext(x)[0] for x in tifflist])
         meta_stripped = sorted([path.splitext(x)[0].split('.')[0] for x in metalist])
         return tiff_stripped == meta_stripped
+
+    def get_differences(metadata,tiffs):
+        """Returns a list of files that don't match"""
+        metadata = set(['_'.join(m.split('_')[:-1]) for m in metadata])
+        tiffs = set(tiffs)
+        return list(set.difference(metadata,tiffs))
 
     error_text = ''
     for dirpath, dirnames, fnames in os.walk(root):
@@ -53,15 +74,17 @@ def validate_dirs(root: str) -> None:
             error_text += f'\n\tduplicate files found in {path.abspath(dirpath)}'
         if not is_bijective(tiffs, metadata):
             error_text += f'\n\tdifferent number of metadata (n = {len(metadata)}) and tiff (n = {len(tiffs)})' \
-                          f' found in {path.abspath(dirpath)}'
-
+                          f' files found in {path.abspath(dirpath)}'
+            error_text += get_differences(metadata,tiffs)
+        if ".tiff_files" not in dirpath:
+            metadata_files = [path.join(dirpath,f) for f in fnames if path.splitext(f)[1].lower() == ".xml" and "measurement_slide" not in f]
+            for f in metadata_files:
+                _, success, msg = metadata.tryparse(f)
+                if not success:
+                    error_text += f'\n\t\tMetadata error in {f}:{msg}'
     if error_text:
-        exit(f'Fund the following problems with the target root directory {root}:{error_text}')
-
-
-def read_metadata(xml_file: str) -> Metadata:
-    tree = etree.parse(xml_file)
-    context = etree.iterparse()
+        error(f'Found the following problems with the target root directory {root}:{error_text}')
+        exit(-1)
 
 
 if __name__ == "__main__":
