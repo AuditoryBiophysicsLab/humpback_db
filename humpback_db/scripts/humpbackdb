@@ -20,7 +20,7 @@ import os
 from os import path
 from typing import Optional, List
 from humpback_db import metadata
-from logging import info, getLogger, ERROR, error
+from logging import info, getLogger, ERROR, error, INFO
 
 
 def main(inputargs) -> int:
@@ -28,15 +28,17 @@ def main(inputargs) -> int:
     args.root_dir = path.expanduser(args.root_dir)
     if not args.verbose:
         getLogger().setLevel(ERROR)
+    else:
+        getLogger().setLevel(INFO)
     validate_input(args)
     if args.validate:
         validate_dirs(args.root_dir)
 
 
-
-
     return 0
 
+def build_database(root):
+   pass
 
 def validate_input(args) -> None:
     """Ensure that the input arguments are reasonable"""
