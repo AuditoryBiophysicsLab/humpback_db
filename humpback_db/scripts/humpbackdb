@@ -33,7 +33,7 @@ def main(inputargs) -> int:
     validate_input(args)
     if args.validate:
         validate_dirs(args.root_dir)
-
+    # ref https://stackoverflow.com/questions/6136588/image-cropping-using-python/8696558
 
     return 0
 

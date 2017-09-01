@@ -10,6 +10,29 @@ from datetime import datetime
 from dateutil import parser
 
 
+def ensure_cls(cl):
+    """If the attribute is an instance of cls, pass, else try constructing."""
+
+    def converter(val):
+        if isinstance(val, cl):
+            return val
+        else:
+            return cl(**val)
+
+    return converter
+
+
+def ensure_enum(cl):
+    """If the attribute is an instance of cls, pass, else try constructing."""
+
+    def converter(val):
+        if isinstance(val, cl):
+            return val
+        else:
+            return cl[val]
+
+    return converter
+
 class SideOfHead(Enum):
     RIGHT = 0
     LEFT = 1
@@ -21,8 +44,8 @@ class Point:
 
 @attr.s
 class ROI:
-    top_left = attr.ib(validator=instance_of(Point))
-    bottom_right =attr.ib(validator=instance_of(Point))
+    top_left = attr.ib(validator=ensure_cls(Point))
+    bottom_right =attr.ib(validator=ensure_cls(Point))
 
     @property
     def area(self):
@@ -39,8 +62,10 @@ class Metadata:
     depth = attr.ib(validator=instance_of(int))
     digitization_date = attr.ib(validator=instance_of(datetime))
 
-    def __attrs_post_init___(self):
-        self.roi = attr.ib()
+    def __attrs_post_init__(self):
+        self.roi = None
+        self.last_modified = None
+
 
 def get_id(s:bs4.element.Tag) -> str:
     """Get the animal ID string"""
